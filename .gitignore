@@ -1,0 +1,93 @@
+# ==========================================
+# Arquivos Compilados do Java
+# ==========================================
+*.class
+
+# Pastas de saída (onde as IDEs jogam os .class)
+bin/
+out/
+build/
+target/
+
+# ==========================================
+# Arquivos de Log e Temporários
+# ==========================================
+*.log
+*.tmp
+*.bak
+hs_err_pid*
+replay_pid*
+
+# ==========================================
+# Pacotes e Executáveis
+# ==========================================
+*.jar
+*.war
+*.zip
+*.tar.gz
+
+# ==========================================
+# Configurações de IDEs (IntelliJ, Eclipse, VS Code)
+# ==========================================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.metadata/
+.classpath
+.project
+.settings/
+.recommenders/
+
+# Visual Studio Code
+.vscode/
+
+# NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# ==========================================
+# Arquivos do Sistema Operacional
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ==========================================
+# Arquivos de IA / Assistentes
+# ==========================================
+.gemini/
+.copilot/
+.aider*
+*.ai-draft
+
+# ==========================================
+# Arquivos específicos do projeto
+# ==========================================
+# PDFs e documentos de apresentação (não versionados)
+*.pdf
+SLIDESLP2.pdf
+
+# Planos e rascunhos gerados automaticamente
+implementation_plan.md
+walkthrough.md
+task.md
