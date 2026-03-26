@@ -149,14 +149,11 @@ public class ChatSystemTest {
         assertEquals("[T6] Channel.MAX_MEMBERS = 50", 50, Channel.MAX_MEMBERS);
 
         // Verifica que métodos são synchronized
-        boolean joinSynced  = false;
         boolean leaveSynced = false;
         boolean bcastSynced = false;
         try {
-            int joinMods  = Channel.class.getMethod("leave", ClientHandler.class).getModifiers();
             int leaveMods = Channel.class.getMethod("leave", ClientHandler.class).getModifiers();
             int bcastMods = Channel.class.getMethod("broadcast", Message.class, ClientHandler.class).getModifiers();
-            joinSynced  = java.lang.reflect.Modifier.isSynchronized(joinMods);
             leaveSynced = java.lang.reflect.Modifier.isSynchronized(leaveMods);
             bcastSynced = java.lang.reflect.Modifier.isSynchronized(bcastMods);
         } catch (NoSuchMethodException ignored) {}
@@ -489,6 +486,7 @@ public class ChatSystemTest {
     // ─────────────────────────────────────────────────────────────────────
     //  [T10]  Desconexão graciosa (volatile + poison pill)
     // ─────────────────────────────────────────────────────────────────────
+    @SuppressWarnings("unused") // ois/ois2 existem apenas para o handshake TCP do ObjectStream
     static void testGracefulDisconnect() throws Exception {
         System.out.println("\n━━━ [T10] Desconexão Graciosa ━━━");
 
@@ -515,6 +513,8 @@ public class ChatSystemTest {
         try (Socket s = new Socket("localhost", TEST_PORT)) {
             ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
             oos.flush();
+            // OIS criado apenas para o handshake do protocolo Java Object Serialization.
+            // Obrigatório: sem ele, o servidor bloqueia em new ObjectInputStream() e há deadlock.
             ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
             oos.writeObject(new Message(Message.TYPE_COMMAND, "Ghost", "", "Ghost"));
             oos.flush();
@@ -529,6 +529,7 @@ public class ChatSystemTest {
             serverStillUp.set(s2.isConnected());
             ObjectOutputStream oos2 = new ObjectOutputStream(s2.getOutputStream());
             oos2.flush();
+            // Idem: OIS necessário para o handshake, nunca lido diretamente.
             ObjectInputStream ois2 = new ObjectInputStream(s2.getInputStream());
             oos2.writeObject(new Message(Message.TYPE_COMMAND, "PostGhost", "", "PostGhost"));
             oos2.flush();
@@ -589,7 +590,7 @@ public class ChatSystemTest {
         }
 
         for (Thread t : threads) t.start();
-        boolean ok = allJoined.await(15, TimeUnit.SECONDS);
+        allJoined.await(15, TimeUnit.SECONDS);
 
         assertTrue("[T3] Thread pool atendeu " + N + " clientes simultâneos",
                 joinCount.get() >= N - 1); // tolerância de 1 por race condition de timing
