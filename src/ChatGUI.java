@@ -62,7 +62,7 @@ public class ChatGUI extends JFrame {
     private JPanel     memberListPanel;
     private JLabel     memberTitleLabel; // título do painel de membros (referência direta)
     private JLabel     statusLabel;
-    private JLabel     typingLabel;    // indicador de digitação animado
+    private CircularAvatar footerAvatar;  // avatar do rodapé da sidebar (referência direta)
 
     // ─── Estado ───────────────────────────────────────────────────────────────
     private ChatClient client;
@@ -180,9 +180,8 @@ public class ChatGUI extends JFrame {
         ap.setPreferredSize(new Dimension(44, 40));
         ap.setBackground(new Color(0x23, 0x25, 0x28));
 
-        CircularAvatar userAvatar = new CircularAvatar("?", new Color(0x5C, 0x5E, 0x6A), 32);
-        userAvatar.setBounds(0, 0, 32, 32);
-        userAvatar.setName("userFooterAvatar");
+        footerAvatar = new CircularAvatar("?", new Color(0x5C, 0x5E, 0x6A), 32);
+        footerAvatar.setBounds(0, 0, 32, 32);
 
         // Ponto verde de status com animação de pulso
         JLabel dot = new JLabel() {
@@ -197,7 +196,7 @@ public class ChatGUI extends JFrame {
         dot.setOpaque(false);
         dot.setBounds(22, 22, 10, 10);
 
-        ap.add(userAvatar);
+        ap.add(footerAvatar);
         ap.add(dot);
 
         JPanel info = new JPanel(new GridLayout(2, 1, 0, 1));
@@ -330,14 +329,6 @@ public class ChatGUI extends JFrame {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(BG_MEDIUM);
         wrapper.setBorder(new EmptyBorder(0, 16, 12, 16));
-
-        // Indicador de digitação
-        typingLabel = new JLabel(" ");
-        typingLabel.setFont(F_SMALL);
-        typingLabel.setForeground(TEXT_MUTED);
-        typingLabel.setBorder(new EmptyBorder(2, 4, 2, 0));
-
-        wrapper.add(typingLabel,    BorderLayout.NORTH);
         wrapper.add(buildInputArea(), BorderLayout.CENTER);
         return wrapper;
     }
@@ -619,25 +610,11 @@ public class ChatGUI extends JFrame {
         dlg.setVisible(true);
     }
 
-    /** Atualiza o avatar circular do rodapé da sidebar com o nick do usuário. */
+    /** Atualiza o avatar circular do rodapé com a inicial e cor do nick conectado. */
     private void updateFooterAvatar(String nick) {
-        // Encontra o CircularAvatar no rodapé via nome
-        for (Component c : getContentPane().getComponents()) {
-            updateAvatarRecursive(c, nick);
-        }
-    }
-
-    private void updateAvatarRecursive(Component c, String nick) {
-        if (c instanceof CircularAvatar && "userFooterAvatar".equals(c.getName())) {
-            ((CircularAvatar) c).setLabel(nick.substring(0, 1).toUpperCase());
-            ((CircularAvatar) c).setColor(colorFor(nick));
-            c.repaint();
-        }
-        if (c instanceof Container) {
-            for (Component child : ((Container) c).getComponents()) {
-                updateAvatarRecursive(child, nick);
-            }
-        }
+        footerAvatar.setLabel(nick.substring(0, 1).toUpperCase());
+        footerAvatar.setColor(colorFor(nick));
+        footerAvatar.repaint();
     }
 
     /** Anima o label de erro com um tremor lateral (shake). */
@@ -1113,64 +1090,6 @@ public class ChatGUI extends JFrame {
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), arc, arc);
             g2.dispose();
             super.paintComponent(g);
-        }
-    }
-
-    /**
-     * RoundedField — JTextField com bordas arredondadas e placeholder.
-     * Suporta flash de erro (vermelho) por 400ms.
-     */
-    static class RoundedField extends JPanel {
-        private final JTextField field;
-        private Color borderColor = new Color(0x20, 0x22, 0x28);
-
-        RoundedField(String defaultText) {
-            setLayout(new BorderLayout());
-            setOpaque(false);
-            setPreferredSize(new Dimension(360, 42));
-
-            field = new JTextField(defaultText);
-            field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            field.setForeground(new Color(0xDB, 0xDE, 0xE1));
-            field.setBackground(new Color(0x40, 0x43, 0x4A));
-            field.setCaretColor(new Color(0xDB, 0xDE, 0xE1));
-            field.setBorder(new EmptyBorder(8, 14, 8, 14));
-            field.setOpaque(false);
-
-            field.addFocusListener(new FocusAdapter() {
-                @Override public void focusGained(FocusEvent e) {
-                    borderColor = new Color(0x58, 0x65, 0xF2);
-                    repaint();
-                }
-                @Override public void focusLost(FocusEvent e) {
-                    borderColor = new Color(0x20, 0x22, 0x28);
-                    repaint();
-                }
-            });
-
-            add(field, BorderLayout.CENTER);
-        }
-
-        String getRealText() { return field.getText(); }
-
-        void addLoginAction(ActionListener l) { field.addActionListener(l); }
-
-        void flashError() {
-            Color orig = borderColor;
-            borderColor = new Color(0xED, 0x43, 0x45);
-            repaint();
-            new Timer(400, e -> { borderColor = orig; repaint(); ((Timer)e.getSource()).stop(); }).start();
-        }
-
-        @Override protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(new Color(0x40, 0x43, 0x4A));
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-            g2.setColor(borderColor);
-            g2.setStroke(new BasicStroke(1.5f));
-            g2.drawRoundRect(1, 1, getWidth()-2, getHeight()-2, 8, 8);
-            g2.dispose();
         }
     }
 

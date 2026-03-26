@@ -58,16 +58,29 @@ public class Channel {
 
     /**
      * Tenta adicionar um usuário ao canal.
-     * acquire() implementa P(s): decrementa o semáforo ou bloqueia se s=0.
-     * @return true se adicionado com sucesso
+     *
+     * POR QUE dois mecanismos (Semáforo + synchronized)?
+     * São responsáveis por coisas DIFERENTES e se complementam:
+     *
+     * - Semáforo (vagas): controla QUANTOS usuários podem estar no canal.
+     *   P(s) = tryAcquire(): decrementa a contagem de vagas.
+     *   Se vagas == 0 (canal cheio), retorna false IMEDIATAMENTE sem bloquear.
+     *   Isso é preferido ao acquire() bloqueante porque não queremos que o
+     *   cliente fique preso esperando uma vaga — é melhor retornar um erro rápido.
+     *
+     * - synchronized (monitor): controla acesso à LISTA de membros.
+     *   Mesmo que duas threads passem pelo tryAcquire() quase simultaneamente,
+     *   só uma pode modificar a lista por vez, evitando corrupção de dados.
+     *
+     * @return true se adicionado com sucesso, false se o canal estiver cheio
      */
     public boolean join(ClientHandler client) throws InterruptedException {
-        // P(s): tenta adquirir uma vaga no canal
+        // P(s): tenta adquirir uma vaga — retorna false se não houver
         if (!vagas.tryAcquire()) {
             return false; // canal cheio, rejeita imediatamente
         }
 
-        // MONITOR: seção crítica para modificar a lista de membros
+        // MONITOR: seção crítica para modificar a lista de membros com segurança
         synchronized (this) {
             if (!members.contains(client)) {
                 members.add(client);
@@ -91,19 +104,21 @@ public class Channel {
      * Difunde (broadcast) uma mensagem para TODOS os membros do canal,
      * exceto o remetente (para não ecoar a própria mensagem de volta).
      *
-     * MONITOR: synchronized garante que nenhum membro é adicionado/removido
-     * enquanto percorremos a lista (evita ConcurrentModificationException e
-     * garante que todos os membros presentes recebam a mensagem).
+     * POR QUE fazemos uma SNAPSHOT (cópia) da lista antes de iterar?
+     * O método está sincronizado, mas sendMessage() pode demorar se a fila
+     * do cliente estiver quase cheia. Manter o lock durante todo o envio
+     * bloquearia outros métodos (join, leave) por mais tempo que o necessário.
+     * Copiamos a lista em O(n) e liberamos o lock imediatamente, fazendo
+     * os envios fora do período crítico — equilíbrio entre segurança e performance.
      */
     public synchronized void broadcast(Message msg, ClientHandler sender) {
-        // Armazena no histórico (seção crítica, mesmo monitor do channel)
         addToHistory(msg);
 
-        // Itera sobre cópia da lista para evitar bloqueio de longa duração
+        // Copia a lista com o lock; depois itera na cópia sem segurar o monitor
         List<ClientHandler> snapshot = new ArrayList<>(members);
         for (ClientHandler member : snapshot) {
             if (member != sender) {
-                member.sendMessage(msg); // enfileira na fila de saída do cliente
+                member.sendMessage(msg); // enfileira na BlockingQueue do cliente (não bloqueia)
             }
         }
     }

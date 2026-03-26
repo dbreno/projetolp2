@@ -272,16 +272,27 @@ public class ClientHandler implements Runnable {
         public void run() {
             try {
                 while (running) {
-                    // P(full): bloqueia até haver mensagem na fila
+                    // P(full): bloqueia até haver mensagem na fila.
+                    // take() libera a CPU enquanto espera (sem busy-waiting),
+                    // equivalente ao sleep() do consumidor nos slides.
                     Message msg = outQueue.take();
 
-                    // Sinal de parada (poison pill)
+                    // Poison pill: padrão para encerrar threads consumidoras
+                    // de forma segura. Em vez de interromper abruptamente a
+                    // thread, inserimos um objeto "veneno" na fila que sinaliza
+                    // encerramento. A thread processa normalmente até achar o
+                    // veneno e sai do loop de forma limpa.
                     if ("__STOP__".equals(msg.getChannel())) break;
 
-                    // Escreve objeto serializado no stream TCP
+                    // Serializa o objeto Message e envia pelo stream TCP
                     out.writeObject(msg);
                     out.flush();
-                    out.reset(); // evita cache de objetos do ObjectOutputStream
+
+                    // out.reset() limpa o cache interno do ObjectOutputStream.
+                    // Java reutiliza referências a objetos já enviados para economizar
+                    // banda. Como enviamos muitas mensagens do mesmo tipo, sem reset()
+                    // o receptor receberia a MESMA referência e o conteúdo nunca mudaria.
+                    out.reset();
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
